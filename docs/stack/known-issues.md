@@ -1,6 +1,9 @@
 # Known issues
 
-Two rough edges in this template that are real, reproduced, and worked around — not fixed at the root, because the root cause lives upstream (Next.js/Turbopack) or off-repo (macOS Gatekeeper). Each entry says what breaks, why, the workaround shipped, and the exact condition under which you can delete the workaround.
+One upstream rough edge remains in this template: Next.js/Turbopack cannot
+follow Bun global-store links. The earlier macOS Gatekeeper and unbounded
+removal stalls are resolved or bounded by Worktree Zero 0.1.19; the retained
+process bounds still fail closed when the machine cannot prove safety.
 
 ## Turbopack fails under Bun's isolated linker + global store
 
@@ -18,20 +21,36 @@ Webpack follows the shared-store links correctly. `scripts/check-agent-readabili
 
 **Remove this when:** vercel/next.js#94432 is fixed upstream, or this repo stops using Bun's isolated linker + global store (drop `linker = "isolated"` / `globalStore = true` from `bunfig.toml`, and each app gets its own uncollapsed `node_modules` instead).
 
-## `wt0 remove` / the pre-remove hook can stall for minutes
+## Removal can refuse when `lsof` cannot finish
 
-**What breaks:** removing a Worktree Zero-managed worktree (`wt0 remove`, or the `.wt0/hooks/pre-remove` hook that runs before it) can hang for minutes instead of finishing in under a second, with the process pegged at 0% CPU — looks hung, isn't spinning.
+**What breaks:** on a heavily loaded or unhealthy machine, removing a Worktree
+Zero-managed worktree can refuse after its bounded liveness proof instead of
+finishing in under a second. The refusal is intentional: a timeout is not
+evidence that no process is using the checkout.
 
-**Why — two independent causes, both under `ops/dev/`:**
+**Why:** both Worktree Zero and Builders Stack inspect open working directories
+through `lsof`. A system-wide `lsof` sweep can be slow even when wt0 itself is
+healthy.
 
-1. **`ops/dev/wt0.sh` re-downloading a fresh wt0 binary.** Any never-launched copy of the unsigned/ad-hoc-signed macOS release binary can hang on its first launch for 6+ minutes — macOS's Gatekeeper "assess a new executable" pass, slow or stuck under load — while a copy that's already run once (or one Homebrew/npm already installed and vouched for) starts instantly. The real fix is signing + notarizing wt0's macOS binaries upstream; that's tracked on the wt0 side.
-2. **`has_live_cwd` in `ops/dev/worktree.sh`.** The obvious fast alternative — asking `wt0 fleet --json` for the `live` field it already computes per runtime — turned out to be the wrong call when measured in this repo with several concurrent agent worktrees: `wt0 fleet --json` took 50-60s versus ~0.4s for a direct `lsof` sweep, and a `wt0 create`/`remove` running elsewhere can make _any_ wt0 subcommand (`--version` included) block on a lock this hook has no business waiting on. Routing liveness through wt0 would have reintroduced the same stall class through a different door.
+Worktree Zero 0.1.19 bounds its own `lsof` calls at 20 seconds by default and
+reports a distinct safety refusal. The repository wrapper keeps its independent
+process-group bound at 30 seconds because its pre-remove hook must remain safe
+even when another wt0 operation holds a lock.
 
-**Workarounds shipped:**
+The original six-minute first-launch failure is closed: 0.1.19's macOS binaries
+are Developer ID-signed and notarized. The launcher still bounds every
+`--version` probe and prefers a satisfying PATH installation, so an unhealthy
+toolchain or older cached binary cannot turn the wrapper into another
+unbounded wait.
 
-- `ops/dev/wt0.sh` now prefers a `wt0` already on `PATH` (Homebrew, npm, or anything already launched once) whenever its version satisfies `.wt0-version` — same major.minor.patch, or newer. It downloads into the versioned cache only as a fallback, and bounds every `--version` probe — PATH, existing cache, and fresh candidate — with `WT0_VERSION_CHECK_TIMEOUT_SECONDS` (default 20s) instead of waiting indefinitely; a timed-out candidate prints an actionable message ("run it once from Terminal, or install wt0 via Homebrew/npm"). Every exit path — success, failure, or signal — cleans up its own `*.tmp`, and a stray one from a previous interrupted install is swept before a new one starts.
-- `has_live_cwd` stays on a direct `lsof -n -w -d cwd` sweep (fast and independent of wt0's own locks), now bounded by a process-group timeout (`BUILDERS_STACK_LIVE_CHECK_TIMEOUT_SECONDS`, default 30s) that terminates descendant processes as well as the wrapper. It fails **closed**: a sweep that can't complete in time refuses removal with "could not prove no live process… retry" rather than assuming the worktree is safe. The `wt0 list --json` ownership fast path and its legacy `fleet --json` fallback use the same bounded supervisor.
+**What to do:** retry after the machine settles. If the sweep remains slow,
+inspect the machine before raising `WT0_LSOF_TIMEOUT` or
+`BUILDERS_STACK_LIVE_CHECK_TIMEOUT_SECONDS`; never bypass the refusal. The
+wrapper uses 0.1.19's cheap `wt0 list --json` ownership fields and falls back
+to the heavier fleet probe only for an older binary.
 
-**Remove this when:** wt0's macOS release binaries are signed and notarized (drops cause 1 outright); reassess `wt0 fleet --json`'s cost if a future wt0 release makes it cheap enough to be a real fast path for cause 2.
+**Remove this entry when:** real fleet measurements show the liveness proof is
+consistently bounded below the normal interactive threshold; keep the
+fail-closed process bounds regardless.
 
 See [builders-stack#53](https://github.com/lonormaly/builders-stack/issues/53) for the original report and reproduction.

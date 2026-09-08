@@ -128,6 +128,15 @@ product code without adding its own line here.
 
 ### Changed
 
+- **Pinned Worktree Zero 0.1.19 and retired the obsolete unsigned-macOS
+  workaround (#56).** The repository launcher now resolves to the signed and
+  notarized release while retaining bounded, fail-closed probes. Builders
+  Stack also picks up bounded dependency and `lsof` probes, Git-locked foreign
+  worktree protection, collision-free runtime suffixes, and remove-from-target
+  branch cleanup. The wrapper now honors a newer PATH version already accepted
+  by the pinned launcher instead of contradicting it with a second exact check;
+  the known-issues guide describes the one remaining `lsof` refusal mode
+  without claiming an unbounded Gatekeeper stall.
 - **Held oxlint-tsgolint at its 0.24 line in dependabot (#33).** Its 7.x line
   tracks TypeScript 7, already held back separately, and type-aware mode is
   disabled (the backend was OOM-ing); dependabot's regroup kept re-proposing

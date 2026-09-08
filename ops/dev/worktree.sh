@@ -19,6 +19,7 @@ OWNER="${OWNER:-user:${USER:-unknown}}"
 MAIN_ROOT="$(git -C "$ROOT" worktree list --porcelain | awk '$1 == "worktree" { print substr($0, 10); exit }')"
 WORKTREES_DIR="$(dirname "$MAIN_ROOT")/$(basename "$MAIN_ROOT")-worktrees"
 WT0_BIN="${WORKTREE_ZERO_BIN:-$ROOT/ops/dev/wt0.sh}"
+WT0_LAUNCHER="$ROOT/ops/dev/wt0.sh"
 WT0_VERSION="$(tr -d '[:space:]' < "$ROOT/.wt0-version")"
 
 usage() {
@@ -88,8 +89,18 @@ require_worktree_zero() {
   local seconds="${WT0_VERSION_CHECK_TIMEOUT_SECONDS:-20}" reported
   [[ -x "$WT0_BIN" ]] || die "Worktree Zero launcher is not executable: $WT0_BIN"
   reported="$(run_bounded "$seconds" "$WT0_BIN" --version 2>/dev/null || true)"
-  [[ "$reported" == "wt0 $WT0_VERSION" ]] ||
-    die "Worktree Zero $WT0_VERSION is required"
+  if [[ "$WT0_BIN" == "$WT0_LAUNCHER" ]]; then
+    # wt0.sh owns the single >= pin comparison and may deliberately select a
+    # newer PATH install. Repeating an exact comparison here would reject the
+    # launcher result as soon as the machine upgrades.
+    [[ "$reported" =~ ^wt0\ [0-9]+\.[0-9]+\.[0-9]+$ ]] ||
+      die "Worktree Zero $WT0_VERSION or newer is required"
+  else
+    # An explicit override bypasses the checksum-verifying launcher, so keep
+    # its historical exact-version contract.
+    [[ "$reported" == "wt0 $WT0_VERSION" ]] ||
+      die "Worktree Zero $WT0_VERSION is required"
+  fi
 }
 
 managed_path_for_branch() {
