@@ -46,6 +46,8 @@ function setupRepository() {
 
   cpSync(join(sourceRoot, "ops", "dev", "worktree.sh"), join(repo, "ops", "dev", "worktree.sh"));
   chmodSync(join(repo, "ops", "dev", "worktree.sh"), 0o755);
+  cpSync(join(sourceRoot, "ops", "dev", "wt0.sh"), join(repo, "ops", "dev", "wt0.sh"));
+  chmodSync(join(repo, "ops", "dev", "wt0.sh"), 0o755);
   writeFileSync(
     join(repo, "package.json"),
     `${JSON.stringify({ name: "fixture", private: true, packageManager: "bun@1.3.14" }, null, 2)}\n`,
@@ -73,7 +75,7 @@ exit 64
     `#!/usr/bin/env bash
 set -euo pipefail
 case "\${1:-}" in
-  --version) printf 'wt0 ${wt0Version}\n'; exit 0 ;;
+  --version) printf 'wt0 %s\n' "\${FAKE_WT0_VERSION:-${wt0Version}}"; exit 0 ;;
   --help) exit 0 ;;
   create)
     branch="$2"; shift 2; target=""; base="HEAD"
@@ -138,6 +140,19 @@ afterEach(() => {
 });
 
 describe("managed worktree lifecycle", () => {
+  test("accepts a newer PATH version selected by the pinned launcher", () => {
+    const { repo, script, env, managedRoot } = setupRepository();
+    const branch = "feat/newer-path-wt0";
+    const launcherEnv = { ...env, FAKE_WT0_VERSION: "0.1.20" };
+    delete launcherEnv.WORKTREE_ZERO_BIN;
+
+    const created = run(repo, [script, branch], launcherEnv);
+    if (created.exitCode !== 0) {
+      throw new Error(created.stderr.toString() || created.stdout.toString());
+    }
+    expect(existsSync(join(managedRoot, "feat-newer-path-wt0"))).toBe(true);
+  });
+
   test("creates a shared-store install and only removes merged, clean work", () => {
     const { repo, script, env, managedRoot } = setupRepository();
     const branch = "feat/shared-store";

@@ -122,7 +122,9 @@ figures above are filesystem free-space deltas, which measure actual physical
 allocation. See the full reproducible method in the
 [Worktree Zero prepared-environment guide](https://github.com/lonormaly/worktree-zero/blob/main/docs/prepared-environments.md).
 
-Reproduced rough edges (a Turbopack/Bun-global-store incompatibility, an occasional slow `wt0 remove`) and their workarounds are tracked in [`docs/stack/known-issues.md`](./docs/stack/known-issues.md).
+The remaining Turbopack/Bun-global-store incompatibility and the bounded,
+fail-closed removal behavior under an unhealthy `lsof` are tracked in
+[`docs/stack/known-issues.md`](./docs/stack/known-issues.md).
 
 ## The map — five buckets, defined by exposure
 

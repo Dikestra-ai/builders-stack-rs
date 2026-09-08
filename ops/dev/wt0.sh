@@ -5,11 +5,11 @@
 # downloading one, as long as its version satisfies .wt0-version — same
 # major.minor.patch, or newer, under plain X.Y.Z semver ordering (no
 # pre-release/build suffixes to compare here; every release is a bare X.Y.Z).
-# This keeps a fresh, never-launched download off the hot path: macOS's
-# first-launch Gatekeeper assessment of a new ad-hoc-signed executable can
-# hang for minutes under load (builders-stack#53), while a binary
-# Homebrew/npm already vouched for — or that simply ran once before — pays no
-# such tax. Downloading into the versioned cache stays the fallback for when
+# This keeps a fresh, never-launched download off the hot path. Worktree Zero
+# 0.1.19's macOS release binaries are Developer ID-signed and notarized, which
+# resolves the first-launch Gatekeeper stall reproduced in builders-stack#53;
+# the bounded probe remains defense in depth for an unhealthy machine or an
+# older pin. Downloading into the versioned cache stays the fallback for when
 # nothing on PATH qualifies.
 set -euo pipefail
 
@@ -150,17 +150,15 @@ if [[ "$cached_version" != "wt0 $VERSION" ]]; then
   install -m 0755 "$temporary/wt0-$target/wt0" "$candidate"
 
   # Bound the fresh binary's first launch. `timeout` doesn't ship on macOS, so
-  # bound it with perl's alarm instead: `exec` replaces the perl process image
-  # with the candidate binary, so SIGALRM lands on the binary itself and
-  # kills it (default disposition) if it hasn't answered in time — this is
-  # exactly the hang builders-stack#53 reproduced (Gatekeeper's first-launch
-  # assessment of a new ad-hoc-signed executable, stuck for 6+ minutes).
+  # use the same process-group supervisor as every other version probe. The
+  # 0.1.19 release is signed and notarized, but a system-wide Gatekeeper or
+  # process-launch failure must still fail closed instead of hanging forever.
   reported="$(version_output "$candidate" || true)"
 
   if [[ "$reported" != "wt0 $VERSION" ]]; then
     if [[ -z "$reported" ]]; then
       echo "error: the downloaded Worktree Zero binary did not report its version within ${version_check_seconds}s." >&2
-      echo "macOS may be assessing the new binary on first launch; run it once from Terminal (e.g. \`$binary --version\` after a manual install) or install wt0 via Homebrew/npm so a vetted copy is already on PATH." >&2
+      echo "macOS may be unable to assess or launch the new binary; retry after the system recovers, run it once from Terminal (e.g. \`$binary --version\`), or install wt0 via Homebrew/npm so a vetted copy is already on PATH." >&2
     else
       echo "error: downloaded Worktree Zero binary reported the wrong version" >&2
     fi
