@@ -1,0 +1,18 @@
+[package]
+name = "stack-ai-worker"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "stack-ai-worker"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+stack-ai = { path = "../../libs/ai" }
+stack-config = { path = "../../libs/config" }
+stack-observability = { path = "../../libs/observability" }

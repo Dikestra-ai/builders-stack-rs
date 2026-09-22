@@ -12,6 +12,8 @@ product code without adding its own line here.
 
 ### Added
 
+- **Translated all backend services and shared libs from TypeScript to Rust (Axum + SQLx + Tokio).** Root `Cargo.toml` workspace with 10 crates: `stack-config` (envy), `stack-observability` (reqwest+tracing), `stack-api-types` (serde+utoipa), `stack-db` (SQLx 0.8 + Postgres), `stack-email` (Resend HTTP API), `stack-ai` (async-openai + Anthropic via reqwest), `stack-auth` (argon2 + session cookies + OAuth2 scaffold), `stack-api` (Axum 0.8, all original routes, utoipa OpenAPI), `stack-payment` (Axum, BoxFuture dyn-safe provider trait, HMAC-SHA256 webhook verification, in-memory rate limiter), `stack-ai-worker` (Tokio mpsc queue, retry backoff, graceful drain). Frontend apps and TypeScript libs unchanged. All 10 Rust crates compile with zero errors (`cargo check`).
+
 - **Adopted Worktree Zero for the parallel-agent worktree lifecycle, in place
   of the wrapper's own hand-rolled create/prepare/remove logic (#43, #44,
   #46).** Source checkout, `doctor` verification, removal, and pruning now go

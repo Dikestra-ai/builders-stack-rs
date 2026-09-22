@@ -1,0 +1,27 @@
+[package]
+name = "stack-api"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "stack-api"
+path = "src/main.rs"
+
+[dependencies]
+axum = { workspace = true }
+axum-extra = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+time = { workspace = true }
+utoipa = { workspace = true }
+stack-config = { path = "../../libs/config" }
+stack-db = { path = "../../libs/db" }
+stack-auth = { path = "../../libs/auth" }
+stack-api-types = { path = "../../libs/api-types" }
+stack-observability = { path = "../../libs/observability" }
