@@ -20,6 +20,7 @@ tracing = { workspace = true }
 uuid = { workspace = true }
 time = { workspace = true }
 utoipa = { workspace = true }
+grapheme-routing = { path = "/data/git/Guard8.ai/grapheme-nn/grapheme-routing" }
 stack-config = { path = "../../libs/config" }
 stack-db = { path = "../../libs/db" }
 stack-auth = { path = "../../libs/auth" }
