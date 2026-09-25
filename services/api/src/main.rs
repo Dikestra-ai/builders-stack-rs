@@ -88,6 +88,8 @@ async fn main() -> anyhow::Result<()> {
         .route("/posts/:id", get(routes::posts::get_post))
         .route("/posts/:id", patch(routes::posts::update_post))
         .route("/posts/:id", delete(routes::posts::delete_post))
+        // Grapheme TSP relay optimizer (api-001)
+        .route("/grapheme/optimize", post(routes::grapheme::optimize))
         // OpenAPI + Swagger UI
         .route("/openapi.json", get(openapi::openapi_json))
         .route("/docs", get(openapi::swagger_ui))

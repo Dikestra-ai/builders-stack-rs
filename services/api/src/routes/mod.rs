@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod grapheme;
 pub mod me;
 pub mod posts;
 

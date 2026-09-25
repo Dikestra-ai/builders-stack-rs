@@ -148,6 +148,60 @@ pub struct SignInRequest {
 // Tests
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Grapheme TSP (api-001)
+// ---------------------------------------------------------------------------
+
+/// Request body for POST /grapheme/optimize.
+///
+/// Accepts either a full distance matrix (`distances`) or relay-node shorthand
+/// (`relays`) for SMP relay path optimization. If both are supplied, `relays`
+/// takes precedence and `distances` is ignored.
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphemeOptimizeRequest {
+    /// Symmetric n×n distance matrix (row-major). Ignored when `relays` is present.
+    #[serde(default)]
+    pub distances: Vec<Vec<f64>>,
+    /// Optional relay shorthand: list of { host, latencyMs, region? }.
+    #[serde(default)]
+    pub relays: Vec<RelayInput>,
+}
+
+/// A relay node for the shorthand relay input format.
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RelayInput {
+    pub host: String,
+    pub latency_ms: f64,
+    #[serde(default)]
+    pub region: Option<String>,
+}
+
+/// Response from POST /grapheme/optimize.
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphemeOptimizeResponse {
+    /// Ordered list of city indices (0-indexed). Last element equals first (closed tour).
+    pub tour: Vec<usize>,
+    /// Total tour cost (sum of distances along the tour).
+    pub cost: f64,
+    /// Relay hostnames in hop order (populated only when `relays` input was used).
+    #[serde(default)]
+    pub relay_hops: Vec<String>,
+    /// Solver statistics.
+    pub stats: GraphemeStats,
+}
+
+/// Solver statistics returned alongside every solution.
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphemeStats {
+    pub n: usize,
+    pub iterations: usize,
+    pub solver: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
